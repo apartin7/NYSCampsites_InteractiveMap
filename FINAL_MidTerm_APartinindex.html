@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>New York Campsites</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Title Styling */
+        #map-title {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+            text-align: center;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        /* Map Styling */
+        #map {
+            position: absolute;
+            top: 60px; /* Adjusted to give space for the title */
+            bottom: 0;
+            width: 100%;
+        }
+
+        /* Controls Styling */
+        #controls {
+            position: absolute;
+            top: 80px; /* Push controls below the title */
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 11;
+        }
+
+        /* Ensure controls are visible above map */
+        #controls label {
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-title">Interactive Map of New York Campsites</div>
+    <div id="map"></div>
+    <div id="controls">
+        <label>
+            <input type="checkbox" id="toggle-trails" checked> Nearby Trails - Saratoga County
+        </label><br>
+        <label>
+            <input type="checkbox" id="toggle-amenities" checked> Campsite Amenities
+        </label>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiYXBhcnRpbjciLCJhIjoiY203bTd0dHVoMGhwYjJrcTBibTZnMGpieSJ9.pzIW3k-xIA233z5v2hknww';
+
+        // Initialize the map
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/apartin7/cm8xrsuxm000o01srfdzeawz9',
+            center: [-75.358, 43.251],
+            zoom: 6.5
+        });
+
+        map.on('load', function () {
+            // Add Trails Source
+            map.addSource('trails', {
+                type: 'vector',
+                url: 'mapbox://apartin7.dygi526f'
+            });
+
+            // Add Trails Layer
+            map.addLayer({
+                'id': 'trails-layer',
+                'type': 'line',
+                'source': 'trails',
+                'source-layer': 'Saratoga_County_Trails_-72408-3c4b0m',
+                'layout': {
+                    'visibility': 'visible'
+                },
+                'paint': {
+                    'line-color': '#b726c9',
+                    'line-width': 2
+                },
+                'interactive': true
+            });
+
+            // Initialize a variable to store the popup instance
+            var trailPopup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: false
+            });
+
+            // When the mouse enters the trails layer, show the popup
+            map.on('mouseenter', 'trails-layer', function (e) {
+                // Change the cursor to a pointer
+                map.getCanvas().style.cursor = 'pointer';
+
+                // Get the first feature under the cursor
+                var feature = e.features[0];
+
+                // Retrieve trail name and length, providing defaults if undefined
+                var trailName = feature.properties.TRAIL_NAME || 'Unnamed Trail';
+                var trailLength = feature.properties.TOT_LENGTH ? feature.properties.TOT_LENGTH + ' mi' : 'Length not specified';
+
+                // Set the popup content
+                trailPopup.setLngLat(e.lngLat)
+                    .setHTML('<strong>' + trailName + '</strong><br>' + trailLength)
+                    .addTo(map);
+            });
+
+            // When the mouse leaves the trails layer, remove the popup
+            map.on('mouseleave', 'trails-layer', function () {
+                map.getCanvas().style.cursor = '';
+                trailPopup.remove();
+            });
+
+            // Add Amenities Source
+            map.addSource('amenities', {
+                type: 'vector',
+                url: 'mapbox://apartin7.4osh9aso'
+            });
+
+            // Add Amenities Layer
+            map.addLayer({
+                'id': 'amenities-layer',
+                'type': 'circle',
+                'source': 'amenities',
+                'source-layer': 'Campsite_Amenities-50s4ez',
+                'paint': {
+                    'circle-color': '#FF5733',
+                    'circle-radius': 6
+                },
+            });
+
+            // Store reference to the popup to remove it later
+            var popup = null;
+
+            // Add hover functionality for amenities
+            map.on('mouseenter', 'amenities-layer', function (e) {
+                var feature = e.features[0];
+                var name = feature.properties.ASSET || 'Unnamed Amenity';  // Default to 'Unnamed Amenity'
+                var details = feature.properties.DETAILS || '.'; // Default to 'No details available.'
+                popup = new mapboxgl.Popup()
+                    .setLngLat(feature.geometry.coordinates)
+                    .setHTML('<strong>' + name + '</strong><br>' + details)
+                    .addTo(map);
+            });
+
+            // Remove the popup when the mouse leaves the amenities layer
+            map.on('mouseleave', 'amenities-layer', function () {
+                if (popup) {
+                    popup.remove();
+                }
+            });
+
+            // Trails Checkbox Toggle
+            document.getElementById('toggle-trails').addEventListener('change', function (e) {
+                map.setLayoutProperty(
+                    'trails-layer',
+                    'visibility',
+                    e.target.checked ? 'visible' : 'none'
+                );
+            });
+
+            // Amenities Checkbox Toggle
+            document.getElementById('toggle-amenities').addEventListener('change', function (e) {
+                map.setLayoutProperty(
+                    'amenities-layer',
+                    'visibility',
+                    e.target.checked ? 'visible' : 'none'
+                );
+            });
+        });
+    </script>
+</body>
+
+</html>
